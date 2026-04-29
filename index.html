@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GlobalTI — Calculadora de ROI · Suite de Conciliaciones</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy:    #0f2240;
+    --blue:    #1a5fb4;
+    --blue-lt: #3584e4;
+    --sky:     #e8f1fb;
+    --white:   #ffffff;
+    --gray-50: #f8fafc;
+    --gray-100:#f1f5f9;
+    --gray-300:#cbd5e1;
+    --gray-500:#64748b;
+    --gray-700:#334155;
+    --green:   #166534;
+    --green-bg:#dcfce7;
+    --red:     #991b1b;
+    --red-bg:  #fee2e2;
+    --gold:    #b45309;
+    --gold-bg: #fef3c7;
+    --radius:  12px;
+    --shadow:  0 4px 24px rgba(15,34,64,.10);
+    --shadow-lg: 0 12px 48px rgba(15,34,64,.16);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--gray-50);
+    color: var(--gray-700);
+    min-height: 100vh;
+  }
+
+  /* ── HERO ─────────────────────────────────────── */
+  .hero {
+    background: var(--navy);
+    padding: 64px 24px 80px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(26,95,180,.35) 0%, transparent 70%);
+  }
+  .hero-inner { position: relative; max-width: 680px; margin: 0 auto; }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18);
+    color: #93c5fd; font-size: 12px; font-weight: 500; letter-spacing: .06em;
+    padding: 6px 14px; border-radius: 100px; margin-bottom: 28px;
+    text-transform: uppercase;
+  }
+  .hero-badge span { width: 6px; height: 6px; border-radius: 50%; background: #60a5fa; }
+  .hero h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(32px, 5vw, 52px);
+    color: var(--white);
+    line-height: 1.15;
+    margin-bottom: 20px;
+  }
+  .hero h1 em { font-style: italic; color: #93c5fd; }
+  .hero p {
+    font-size: 17px; color: rgba(255,255,255,.72);
+    line-height: 1.7; max-width: 520px; margin: 0 auto 40px;
+  }
+  .hero-stats {
+    display: flex; justify-content: center; gap: 40px; flex-wrap: wrap;
+  }
+  .hero-stat { text-align: center; }
+  .hero-stat strong {
+    display: block; font-family: 'DM Serif Display', serif;
+    font-size: 28px; color: #fff; line-height: 1;
+  }
+  .hero-stat span { font-size: 12px; color: rgba(255,255,255,.55); letter-spacing: .04em; }
+
+  /* ── LAYOUT ───────────────────────────────────── */
+  .main {
+    max-width: 1100px; margin: 0 auto;
+    padding: 56px 24px 80px;
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 40px;
+    align-items: start;
+  }
+  @media (max-width: 860px) {
+    .main { grid-template-columns: 1fr; }
+  }
+
+  /* ── CARD ─────────────────────────────────────── */
+  .card {
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .card-head {
+    padding: 24px 28px 20px;
+    border-bottom: 1px solid var(--gray-100);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .card-head-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: var(--sky);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .card-head h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px; color: var(--navy); font-weight: 400;
+  }
+  .card-head p { font-size: 13px; color: var(--gray-500); margin-top: 2px; }
+  .card-body { padding: 28px; }
+
+  /* ── FORM ─────────────────────────────────────── */
+  .form-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+  }
+  .form-grid .full { grid-column: 1 / -1; }
+
+  .field { display: flex; flex-direction: column; gap: 7px; }
+  .field label {
+    font-size: 13px; font-weight: 500; color: var(--gray-700);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .field label .tip {
+    font-size: 11px; font-weight: 400; color: var(--gray-500);
+    background: var(--gray-100); padding: 2px 7px; border-radius: 4px;
+  }
+  .field input, .field select {
+    border: 1.5px solid var(--gray-300);
+    border-radius: 8px; padding: 10px 14px;
+    font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--navy);
+    background: var(--white); transition: border-color .2s, box-shadow .2s;
+    outline: none;
+  }
+  .field input:focus, .field select:focus {
+    border-color: var(--blue-lt);
+    box-shadow: 0 0 0 3px rgba(53,132,228,.15);
+  }
+  .field input.error { border-color: #f87171; }
+  .field-hint { font-size: 11px; color: var(--gray-500); }
+
+  .divider {
+    height: 1px; background: var(--gray-100); margin: 8px 0 20px;
+  }
+
+  .section-label {
+    font-size: 11px; font-weight: 600; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--blue); margin-bottom: 16px;
+  }
+
+  /* ── BTN ──────────────────────────────────────── */
+  .btn-primary {
+    width: 100%; padding: 14px 24px;
+    background: var(--navy); color: var(--white);
+    border: none; border-radius: 10px;
+    font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600;
+    cursor: pointer; transition: background .2s, transform .1s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin-top: 24px;
+  }
+  .btn-primary:hover { background: var(--blue); }
+  .btn-primary:active { transform: scale(.98); }
+  .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+
+  .btn-download {
+    width: 100%; padding: 14px 24px;
+    background: var(--blue); color: var(--white);
+    border: none; border-radius: 10px;
+    font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600;
+    cursor: pointer; transition: background .2s, transform .1s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin-top: 8px;
+  }
+  .btn-download:hover { background: var(--blue-lt); }
+  .btn-download:active { transform: scale(.98); }
+
+  .btn-reset {
+    width: 100%; padding: 10px 24px;
+    background: transparent; color: var(--gray-500);
+    border: 1.5px solid var(--gray-300); border-radius: 10px;
+    font-family: 'DM Sans', sans-serif; font-size: 13px;
+    cursor: pointer; transition: all .2s; margin-top: 8px;
+  }
+  .btn-reset:hover { border-color: var(--blue-lt); color: var(--blue); }
+
+  /* ── RESULTS PANEL ────────────────────────────── */
+  .results { display: none; }
+  .results.visible { display: block; }
+
+  .kpi-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+    margin-bottom: 20px;
+  }
+  .kpi {
+    border-radius: 10px; padding: 16px 18px;
+    border: 1px solid var(--gray-100);
+  }
+  .kpi .kpi-label {
+    font-size: 11px; font-weight: 500; text-transform: uppercase;
+    letter-spacing: .06em; color: var(--gray-500); margin-bottom: 6px;
+  }
+  .kpi .kpi-value {
+    font-family: 'DM Serif Display', serif; font-size: 26px; line-height: 1;
+  }
+  .kpi .kpi-sub { font-size: 11px; color: var(--gray-500); margin-top: 4px; }
+  .kpi.blue  { background: var(--sky); }
+  .kpi.blue .kpi-value { color: var(--navy); }
+  .kpi.green { background: var(--green-bg); }
+  .kpi.green .kpi-value { color: var(--green); }
+  .kpi.gold  { background: var(--gold-bg); }
+  .kpi.gold .kpi-value  { color: var(--gold); }
+  .kpi.navy  { background: var(--navy); }
+  .kpi.navy .kpi-label  { color: rgba(255,255,255,.6); }
+  .kpi.navy .kpi-value  { color: #fff; }
+  .kpi.navy .kpi-sub    { color: rgba(255,255,255,.5); }
+
+  /* ── FLUJO TABLE ──────────────────────────────── */
+  .flujo-title {
+    font-size: 13px; font-weight: 600; color: var(--navy);
+    margin: 20px 0 12px; display: flex; align-items: center; gap: 8px;
+  }
+  .flujo-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--gray-100); }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th {
+    background: var(--navy); color: var(--white);
+    padding: 9px 12px; text-align: center; font-weight: 500;
+    white-space: nowrap;
+  }
+  thead th:first-child { text-align: left; }
+  tbody tr:nth-child(even) { background: var(--gray-50); }
+  tbody td { padding: 8px 12px; text-align: center; white-space: nowrap; }
+  tbody td:first-child { text-align: left; font-weight: 500; color: var(--navy); }
+  .row-total td { background: var(--sky); font-weight: 600; color: var(--navy); }
+  .row-acum  td { background: var(--navy); color: #fff; font-weight: 600; }
+  .neg { color: #dc2626; }
+  .pos { color: var(--green); }
+
+  /* ── SIDEBAR STICKY ───────────────────────────── */
+  .sidebar { position: sticky; top: 24px; }
+
+  /* ── TRUST ITEMS ──────────────────────────────── */
+  .trust-list { display: flex; flex-direction: column; gap: 14px; }
+  .trust-item {
+    display: flex; gap: 12px; align-items: flex-start;
+  }
+  .trust-icon {
+    width: 36px; height: 36px; border-radius: 8px;
+    background: var(--sky); display: flex; align-items: center;
+    justify-content: center; font-size: 16px; flex-shrink: 0; margin-top: 2px;
+  }
+  .trust-item strong { display: block; font-size: 13px; color: var(--navy); }
+  .trust-item span { font-size: 12px; color: var(--gray-500); line-height: 1.5; }
+
+  .guarantee-box {
+    background: var(--gold-bg); border: 1px solid #fcd34d;
+    border-radius: 10px; padding: 16px 18px; margin-top: 20px;
+  }
+  .guarantee-box strong {
+    display: block; font-size: 13px; color: var(--gold); margin-bottom: 4px;
+  }
+  .guarantee-box p { font-size: 12px; color: #92400e; line-height: 1.5; }
+
+  /* ── FOOTER ───────────────────────────────────── */
+  footer {
+    text-align: center; padding: 32px 24px;
+    font-size: 12px; color: var(--gray-500);
+    border-top: 1px solid var(--gray-100);
+  }
+  footer a { color: var(--blue); text-decoration: none; }
+
+  /* ── LOADER ───────────────────────────────────── */
+  .loader {
+    display: none; align-items: center; justify-content: center;
+    gap: 10px; padding: 20px; color: var(--blue); font-size: 14px;
+  }
+  .loader.active { display: flex; }
+  .spinner {
+    width: 20px; height: 20px; border: 2px solid var(--sky);
+    border-top-color: var(--blue); border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── ANIMS ────────────────────────────────────── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .animate-in { animation: fadeUp .4s ease both; }
+  .delay-1 { animation-delay: .08s; }
+  .delay-2 { animation-delay: .16s; }
+  .delay-3 { animation-delay: .24s; }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-inner">
+    <div class="hero-badge"><span></span>GlobalTI · RPA + IA</div>
+    <h1>¿Cuánto le cuesta a tu empresa<br><em>conciliar de forma manual?</em></h1>
+    <p>Completá los datos de tu contexto y calculá en segundos el retorno de inversión de automatizar tus conciliaciones con nuestra Suite RPA.</p>
+    <div class="hero-stats">
+      <div class="hero-stat"><strong>80%+</strong><span>Automatización garantizada</span></div>
+      <div class="hero-stat"><strong>&lt;12m</strong><span>Tiempo de recuperación típico</span></div>
+      <div class="hero-stat"><strong>5</strong><span>Entidades incluidas</span></div>
+    </div>
+  </div>
+</header>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- COLUMNA IZQUIERDA -->
+  <div>
+
+    <!-- FORMULARIO -->
+    <div class="card animate-in" id="form-card">
+      <div class="card-head">
+        <div class="card-head-icon">📋</div>
+        <div>
+          <h2>Datos de tu operación</h2>
+          <p>Solo necesitamos 4 datos básicos para calcular tu ROI</p>
+        </div>
+      </div>
+      <div class="card-body">
+
+        <div class="section-label">Tu empresa hoy</div>
+        <div class="form-grid">
+          <div class="field full">
+            <label>Nombre de empresa / cliente <span class="tip">Opcional</span></label>
+            <input type="text" id="empresa" placeholder="Ej: Mi Empresa S.A.">
+          </div>
+          <div class="field">
+            <label>Personas que concilian</label>
+            <input type="number" id="personas" value="2" min="1" max="20">
+            <span class="field-hint">Analistas / contadores involucrados</span>
+          </div>
+          <div class="field">
+            <label>Horas dedicadas / mes <span class="tip">Total equipo</span></label>
+            <input type="number" id="horas" value="90" min="1" max="500">
+            <span class="field-hint">Suma de horas de todas las personas</span>
+          </div>
+          <div class="field">
+            <label>Sueldo promedio (USD/mes)</label>
+            <input type="number" id="sueldo" value="400" min="100" max="10000">
+            <span class="field-hint">Por persona del equipo conciliador</span>
+          </div>
+          <div class="field">
+            <label>Entidades a conciliar</label>
+            <input type="number" id="entidades" value="5" min="1" max="10">
+            <span class="field-hint">Bancos + procesadoras + bocas cobranza</span>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+        <div class="section-label">Cronograma de activación</div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Entidades activas — Mes 2</label>
+            <input type="number" id="m2" value="2" min="0" max="10">
+          </div>
+          <div class="field">
+            <label>Entidades activas — Mes 3</label>
+            <input type="number" id="m3" value="4" min="0" max="10">
+          </div>
+        </div>
+        <p class="field-hint" style="margin-top:-8px">Mes 1 = 0 entidades (implementación). Mes 4 en adelante = todas activas.</p>
+
+        <button class="btn-primary" onclick="calcular()">
+          <span>⚡</span> Calcular mi ROI ahora
+        </button>
+
+        <div class="loader" id="loader">
+          <div class="spinner"></div> Calculando tu retorno...
+        </div>
+      </div>
+    </div>
+
+    <!-- RESULTADOS -->
+    <div class="card results animate-in delay-1" id="results-card" style="margin-top:24px">
+      <div class="card-head">
+        <div class="card-head-icon">📈</div>
+        <div>
+          <h2>Tu análisis de ROI</h2>
+          <p id="results-subtitle">Resultados calculados para tu contexto</p>
+        </div>
+      </div>
+      <div class="card-body">
+
+        <div class="kpi-grid" id="kpi-grid"></div>
+
+        <div class="flujo-title">📊 Flujo de caja — Año 1 (12 meses)</div>
+        <div class="flujo-wrap">
+          <table id="flujo-table"></table>
+        </div>
+
+        <div class="flujo-title" style="margin-top:20px">⚖️ Comparativo Año 1 vs Año 2</div>
+        <div class="flujo-wrap">
+          <table id="comp-table"></table>
+        </div>
+
+        <button class="btn-download" onclick="descargarExcel()">
+          <span>⬇️</span> Descargar Excel con mis resultados
+        </button>
+        <button class="btn-reset" onclick="resetear()">← Modificar datos</button>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+
+    <div class="card animate-in delay-2">
+      <div class="card-head">
+        <div class="card-head-icon">🔷</div>
+        <div>
+          <h2>Qué incluye la Suite</h2>
+          <p>Plan Explora · Hasta 5 entidades</p>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="trust-list">
+          <div class="trust-item">
+            <div class="trust-icon">🤖</div>
+            <div>
+              <strong>Robot RPA + IA 24/7</strong>
+              <span>Descarga, normaliza y concilia automáticamente sin intervención manual.</span>
+            </div>
+          </div>
+          <div class="trust-item">
+            <div class="trust-icon">📊</div>
+            <div>
+              <strong>Panel de control en tiempo real</strong>
+              <span>Reportes de conciliados y diferencias. Alertas automáticas por correo.</span>
+            </div>
+          </div>
+          <div class="trust-item">
+            <div class="trust-icon">🔧</div>
+            <div>
+              <strong>Soporte y mantenimiento incluido</strong>
+              <span>SLA garantizado. Respuesta en 2hs para incidentes críticos en producción.</span>
+            </div>
+          </div>
+          <div class="trust-item">
+            <div class="trust-icon">💰</div>
+            <div>
+              <strong>USD 2.000 setup · USD 550/mes</strong>
+              <span>Facturación progresiva por entidad activada. Pago en 2 cuotas el setup.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="guarantee-box">
+          <strong>✅ Garantía de resultado</strong>
+          <p>Si a los 90 días no alcanzamos el 70% de automatización, podés rescindir sin penalidad.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card animate-in delay-3" style="margin-top:20px">
+      <div class="card-body" style="padding:20px">
+        <p style="font-size:13px;color:var(--gray-500);margin-bottom:12px;text-align:center">¿Querés una demo personalizada?</p>
+        <a href="mailto:rpa.servicios@globalti.com.py" style="display:block;text-align:center;background:var(--navy);color:#fff;padding:11px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none">✉️ Contactar a GlobalTI</a>
+        <p style="font-size:11px;color:var(--gray-500);text-align:center;margin-top:10px">+595 994 440 781 · www.globalti.com.py</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<footer>
+  <p>© 2026 GlobalTI · Automatización como Servicio (RPA + IA) · Bulnes 830 c/Avda. España, Asunción</p>
+  <p style="margin-top:6px"><a href="mailto:rpa.servicios@globalti.com.py">rpa.servicios@globalti.com.py</a></p>
+</footer>
+
+<script>
+// ── CONSTANTES GLOBALTI ───────────────────────────────────────
+const SETUP      = 2000;
+const TARIFA_MES = 550;
+const AUTO_PCT   = 0.80;
+const HORAS_MES_LABORAL = 160;
+
+// Cronograma por defecto: entidades activas por mes (12 meses)
+function getCronograma(entidades, m2, m3) {
+  return [
+    0,           // mes 1
+    Math.min(m2, entidades),
+    Math.min(m3, entidades),
+    entidades, entidades, entidades, entidades,
+    entidades, entidades, entidades, entidades, entidades
+  ];
+}
+
+function fmt(n, prefix='USD ') {
+  if (n === undefined || n === null) return '—';
+  return prefix + Math.round(n).toLocaleString('es-PY');
+}
+function fmtPct(n) {
+  return (n * 100).toFixed(1) + '%';
+}
+
+let lastData = null;
+
+function calcular() {
+  // Leer inputs
+  const empresa   = document.getElementById('empresa').value.trim() || 'Mi Empresa';
+  const personas  = parseFloat(document.getElementById('personas').value) || 2;
+  const horas     = parseFloat(document.getElementById('horas').value) || 90;
+  const sueldo    = parseFloat(document.getElementById('sueldo').value) || 400;
+  const entidades = parseFloat(document.getElementById('entidades').value) || 5;
+  const m2        = parseFloat(document.getElementById('m2').value) || 2;
+  const m3        = parseFloat(document.getElementById('m3').value) || 4;
+
+  // Mostrar loader
+  document.getElementById('loader').classList.add('active');
+  document.getElementById('results-card').classList.remove('visible');
+
+  setTimeout(() => {
+    const data = computeROI(empresa, personas, horas, sueldo, entidades, m2, m3);
+    lastData = data;
+    renderResults(data);
+    document.getElementById('loader').classList.remove('active');
+    document.getElementById('results-card').classList.add('visible');
+    document.getElementById('results-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 600);
+}
+
+function computeROI(empresa, personas, horas, sueldo, entidades, m2, m3) {
+  const costoHora    = sueldo / HORAS_MES_LABORAL;
+  const costoMensual = horas * costoHora * personas;
+  const ahorroMens   = costoMensual * AUTO_PCT;
+  const ahorroAnual  = ahorroMens * 12;
+
+  const cronograma = getCronograma(entidades, m2, m3);
+  const tarifaEntidad = TARIFA_MES / 5; // USD 110 por entidad base 5
+
+  // Flujo mensual año 1
+  const flujos = [];
+  let acum = 0;
+  for (let i = 0; i < 12; i++) {
+    const setup1 = i === 0 ? SETUP / 2 : 0;
+    const setup2 = i === 1 ? SETUP / 2 : 0;
+    const tarifa = cronograma[i] * tarifaEntidad;
+    const inversion = setup1 + setup2 + tarifa;
+    const ahorro    = ahorroMens;
+    const neto      = ahorro - inversion;
+    acum += neto;
+    flujos.push({ mes: i+1, setup1, setup2, tarifa, inversion, ahorro, neto, acum });
+  }
+
+  // Año 2: sin setup, tarifa plena
+  const invA2    = TARIFA_MES * 12;
+  const ahorroA2 = ahorroAnual;
+  const benefA2  = ahorroA2 - invA2;
+  const roiA2    = (ahorroA2 - invA2) / invA2;
+
+  // Inversión real año 1
+  const invA1 = SETUP + cronograma.reduce((s, e) => s + e * tarifaEntidad, 0);
+  const benefA1 = ahorroAnual - invA1;
+  const roiA1 = benefA1 / invA1;
+
+  // Payback
+  let payback = null;
+  let acumPb = 0;
+  for (let i = 0; i < 24; i++) {
+    const inv = i < 12
+      ? flujos[i].inversion
+      : TARIFA_MES;
+    acumPb += ahorroMens - inv;
+    if (acumPb >= 0 && payback === null) payback = i + 1;
+  }
+
+  const acum24 = flujos[11].acum + benefA2;
+
+  return {
+    empresa, personas, horas, sueldo, entidades, m2, m3,
+    costoHora, costoMensual, ahorroMens, ahorroAnual,
+    invA1, benefA1, roiA1,
+    invA2, benefA2, roiA2,
+    payback, acum24, flujos, cronograma
+  };
+}
+
+function renderResults(d) {
+  document.getElementById('results-subtitle').textContent =
+    `Resultados para ${d.empresa} · ${d.entidades} entidades`;
+
+  // KPIs
+  const kpis = [
+    { label:'Ahorro mensual estimado', value: fmt(d.ahorroMens), sub:'en horas de personal liberadas', cls:'blue' },
+    { label:'ROI Año 1',               value: fmtPct(d.roiA1),   sub:'con setup y ramp-up incluidos', cls: d.roiA1 >= 0 ? 'green':'kpi' },
+    { label:'ROI Año 2',               value: fmtPct(d.roiA2),   sub:'sin setup · tarifa plena',      cls:'green' },
+    { label:'Payback estimado',        value: d.payback ? `Mes ${d.payback}` : '>24m', sub:'mes en que el acumulado cruza cero', cls:'gold' },
+    { label:'Beneficio neto Año 1',    value: fmt(d.benefA1),    sub:'ahorro − inversión total',       cls: d.benefA1 >= 0 ? 'blue':'kpi' },
+    { label:'ROI acumulado 24 meses',  value: fmt(d.acum24),     sub:'beneficio neto en 2 años',       cls:'navy' },
+  ];
+  const grid = document.getElementById('kpi-grid');
+  grid.innerHTML = kpis.map(k => `
+    <div class="kpi ${k.cls}">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value">${k.value}</div>
+      <div class="kpi-sub">${k.sub}</div>
+    </div>`).join('');
+
+  // Tabla flujo año 1
+  const ft = document.getElementById('flujo-table');
+  const meses = d.flujos.map(f => `<th>M${f.mes}</th>`).join('');
+  const makeRow = (label, vals, cls='') => {
+    const cells = vals.map(v => {
+      const n = typeof v === 'number' ? Math.round(v) : v;
+      const colorCls = typeof v === 'number' ? (v < 0 ? 'neg' : (v > 0 ? 'pos' : '')) : '';
+      return `<td class="${colorCls}">${typeof v === 'number' ? fmt(v,'') : v}</td>`;
+    }).join('');
+    return `<tr class="${cls}"><td>${label}</td>${cells}</tr>`;
+  };
+
+  ft.innerHTML = `
+    <thead><tr><th>Concepto</th>${meses}</tr></thead>
+    <tbody>
+      ${makeRow('Inversión total', d.flujos.map(f => -f.inversion))}
+      ${makeRow('Ahorro generado', d.flujos.map(f => f.ahorro))}
+      ${makeRow('Resultado neto', d.flujos.map(f => f.neto), 'row-total')}
+      ${makeRow('Acumulado', d.flujos.map(f => f.acum), 'row-acum')}
+    </tbody>`;
+
+  // Tabla comparativo año 1 vs año 2
+  const ct = document.getElementById('comp-table');
+  const rows = [
+    ['Inversión total',    fmt(d.invA1),   fmt(d.invA2)],
+    ['Ahorro generado',    fmt(d.ahorroAnual), fmt(d.ahorroAnual)],
+    ['Beneficio neto',     fmt(d.benefA1), fmt(d.benefA2)],
+    ['ROI del período',    fmtPct(d.roiA1), fmtPct(d.roiA2)],
+    ['Setup incluido',     fmt(SETUP),     'USD 0'],
+    ['Tarifa promedio/mes',fmt(d.invA1/12-SETUP/12), fmt(TARIFA_MES)],
+  ];
+  ct.innerHTML = `
+    <thead><tr><th>Indicador</th><th>Año 1</th><th>Año 2</th></tr></thead>
+    <tbody>${rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join('')}</tbody>`;
+}
+
+function resetear() {
+  document.getElementById('results-card').classList.remove('visible');
+  document.getElementById('form-card').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ── GENERAR EXCEL ─────────────────────────────────────────────
+function descargarExcel() {
+  if (!lastData) return;
+  const d = lastData;
+  const wb = XLSX.utils.book_new();
+
+  // ── HOJA 1: RESUMEN ─────────────────────────────
+  const resumenData = [
+    ['ANÁLISIS DE ROI — Suite Integral de Conciliaciones — GlobalTI'],
+    [''],
+    ['Cliente', d.empresa],
+    ['Fecha de análisis', new Date().toLocaleDateString('es-PY')],
+    [''],
+    ['── DATOS DEL CLIENTE ──'],
+    ['Personas que concilian', d.personas],
+    ['Horas dedicadas / mes', d.horas],
+    ['Sueldo promedio (USD/mes)', d.sueldo],
+    ['Entidades a conciliar', d.entidades],
+    ['Costo hora-hombre (USD)', +d.costoHora.toFixed(2)],
+    ['Costo mensual conciliación (USD)', Math.round(d.costoMensual)],
+    [''],
+    ['── SOLUCIÓN GLOBALTI ──'],
+    ['Setup / Implementación (USD)', SETUP],
+    ['Tarifa mensual (USD)', TARIFA_MES],
+    ['% Automatización garantizado', '80%'],
+    [''],
+    ['── RESULTADOS ──'],
+    ['Ahorro mensual estimado (USD)', Math.round(d.ahorroMens)],
+    ['Inversión total Año 1 (USD)', Math.round(d.invA1)],
+    ['Beneficio neto Año 1 (USD)', Math.round(d.benefA1)],
+    ['ROI Año 1', fmtPct(d.roiA1)],
+    ['ROI Año 2', fmtPct(d.roiA2)],
+    ['Payback (mes)', d.payback || '>24'],
+    ['ROI acumulado 24 meses (USD)', Math.round(d.acum24)],
+    [''],
+    ['── COMPARATIVO AÑO 1 vs AÑO 2 ──'],
+    ['Indicador', 'Año 1', 'Año 2'],
+    ['Inversión total (USD)', Math.round(d.invA1), Math.round(d.invA2)],
+    ['Ahorro generado (USD)', Math.round(d.ahorroAnual), Math.round(d.ahorroAnual)],
+    ['Beneficio neto (USD)', Math.round(d.benefA1), Math.round(d.benefA2)],
+    ['ROI del período', fmtPct(d.roiA1), fmtPct(d.roiA2)],
+  ];
+  const ws1 = XLSX.utils.aoa_to_sheet(resumenData);
+  ws1['!cols'] = [{wch:38},{wch:18},{wch:18}];
+  XLSX.utils.book_append_sheet(wb, ws1, 'Resumen ROI');
+
+  // ── HOJA 2: FLUJO MENSUAL ────────────────────────
+  const flujoHeader = ['Concepto', ...d.flujos.map(f => `Mes ${f.mes}`)];
+  const flujoRows = [
+    flujoHeader,
+    ['Inversión total (USD)', ...d.flujos.map(f => -Math.round(f.inversion))],
+    ['  Setup cuota 1', ...d.flujos.map(f => f.setup1 ? -Math.round(f.setup1) : 0)],
+    ['  Setup cuota 2', ...d.flujos.map(f => f.setup2 ? -Math.round(f.setup2) : 0)],
+    ['  Tarifa mensual', ...d.flujos.map(f => -Math.round(f.tarifa))],
+    ['Ahorro generado (USD)', ...d.flujos.map(f => Math.round(f.ahorro))],
+    ['Resultado neto (USD)', ...d.flujos.map(f => Math.round(f.neto))],
+    ['Acumulado (USD)', ...d.flujos.map(f => Math.round(f.acum))],
+  ];
+  const ws2 = XLSX.utils.aoa_to_sheet(flujoRows);
+  ws2['!cols'] = [{wch:28}, ...d.flujos.map(() => ({wch:11}))];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Flujo Mensual');
+
+  // ── DESCARGAR ────────────────────────────────────
+  const nombre = (d.empresa || 'Cliente').replace(/\s+/g,'_');
+  XLSX.writeFile(wb, `ROI_GlobalTI_${nombre}_${new Date().getFullYear()}.xlsx`);
+}
+</script>
+</body>
+</html>
